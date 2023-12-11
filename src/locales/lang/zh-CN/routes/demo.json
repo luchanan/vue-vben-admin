@@ -128,7 +128,9 @@
     "list": "列表页",
     "listCard": "卡片列表",
     "listBasic": "标准列表",
-    "listSearch": "搜索列表"
+    "listSearch": "搜索列表",
+    "application": "应用页",
+    "complexApplication": "综合应用"
   },
   "permission": {
     "permission": "权限管理",

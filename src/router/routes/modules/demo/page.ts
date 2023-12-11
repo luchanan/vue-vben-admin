@@ -248,6 +248,25 @@ const page: AppRouteModule = {
         },
       ],
     },
+    {
+      path: 'application',
+      name: 'Application',
+      component: getParentLayout('Application'),
+      redirect: '/page-demo/application/complex',
+      meta: {
+        title: t('routes.demo.page.application'),
+      },
+      children: [
+        {
+          path: 'complex',
+          name: 'ApplicationComplex',
+          component: () => import('@/views/demo/page/application/complex/index.vue'),
+          meta: {
+            title: t('routes.demo.page.complexApplication'),
+          },
+        },
+      ],
+    },
     // =============================list end=============================
   ],
 };

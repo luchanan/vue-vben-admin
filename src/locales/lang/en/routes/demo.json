@@ -129,7 +129,9 @@
     "listCard": "Card list",
     "basic": "Basic list",
     "listBasic": "Basic list",
-    "listSearch": "Search list"
+    "listSearch": "Search list",
+    "application": "Application",
+    "complexApplication": "Complex Application"
   },
   "permission": {
     "permission": "Permission",
