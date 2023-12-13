@@ -1,8 +1,5 @@
-import { optionsListApi } from '@/api/demo/select';
-import { FormProps, FormSchema, BasicColumn } from '@/components/Table';
-import { VxeFormItemProps, VxeGridPropTypes } from '@/components/VxeTable';
-import { ref } from 'vue';
-import { Input } from 'ant-design-vue';
+import { FormProps, BasicColumn } from '@/components/Table';
+// import { VxeFormItemProps, VxeGridPropTypes } from '@/components/VxeTable';
 
 export function getBasicColumns(): BasicColumn[] {
   return [
@@ -59,19 +56,11 @@ export function getFormConfig(): Partial<FormProps> {
         field: `shopCode`,
         label: `商品编码`,
         component: 'InputSearch',
-        // watchEventNames: ['search'],
         colProps,
         componentProps: {
           showSearch: true,
         },
       },
-      // {
-      //   field: `name`,
-      //   label: `商品名称`,
-      //   component: 'Select',
-      //   slot: 'name',
-      //   colProps,
-      // },
       {
         field: `address`,
         label: `地址`,

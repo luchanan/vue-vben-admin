@@ -263,7 +263,20 @@ const page: AppRouteModule = {
           component: () => import('@/views/demo/page/application/complex/index.vue'),
           meta: {
             title: t('routes.demo.page.complexApplication'),
+            hideChildrenInMenu: true,
           },
+          children: [
+            {
+              path: ':action',
+              name: 'ApplicationComplexDetail',
+              component: () => import('@/views/demo/page/application/complex/main.vue'),
+              meta: {
+                title: t('routes.demo.page.complexApplication'),
+                currentActiveMenu: '/page-demo/application/complex',
+                hideTab: true,
+              },
+            },
+          ],
         },
       ],
     },
