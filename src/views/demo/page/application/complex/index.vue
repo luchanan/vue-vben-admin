@@ -53,7 +53,7 @@
   import { Alert } from 'ant-design-vue';
   import type { Key } from 'ant-design-vue/lib/table/interface';
   import { useGo } from '@/hooks/web/usePage';
-  import { demoListApi } from '@/api/demo/table';
+  import * as applicationComplex from '@/api/demo/application-complex';
 
   defineOptions({ name: 'ApplicationComplex' });
   let rowKey = 'id'; // 默认rowKey name
@@ -65,7 +65,7 @@
   const [registerTable] = useTable({
     title: '',
     rowKey,
-    api: demoListApi,
+    api: applicationComplex.page,
     columns: getBasicColumns(),
     useSearchForm: true,
     formConfig: getFormConfig(),
