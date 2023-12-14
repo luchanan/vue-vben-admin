@@ -56,7 +56,7 @@
   import { demoListApi } from '@/api/demo/table';
 
   defineOptions({ name: 'ApplicationComplex' });
-  let rowKey = 'key'; // 默认rowKey name
+  let rowKey = 'id'; // 默认rowKey name
   const state = reactive<{
     selectedRowKeys: Key[];
   }>({
@@ -64,11 +64,13 @@
   });
   const [registerTable] = useTable({
     title: '',
+    rowKey,
     api: demoListApi,
     columns: getBasicColumns(),
     useSearchForm: true,
     formConfig: getFormConfig(),
     showTableSetting: true,
+    clickToRowSelect: false,
     rowSelection: {
       type: 'checkbox',
       selectedRowKeys: state.selectedRowKeys,

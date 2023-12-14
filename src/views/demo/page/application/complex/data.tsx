@@ -1,6 +1,10 @@
 import { FormProps, BasicColumn } from '@/components/Table';
+import type { DescItem } from '/@/components/Description/index';
 // import { VxeFormItemProps, VxeGridPropTypes } from '@/components/VxeTable';
-
+const colProps = {
+  xl: 12,
+  xxl: 8,
+};
 export function getBasicColumns(): BasicColumn[] {
   return [
     {
@@ -44,13 +48,8 @@ export function getBasicColumns(): BasicColumn[] {
   ];
 }
 export function getFormConfig(): Partial<FormProps> {
-  const colProps = {
-    xl: 12,
-    xxl: 8,
-  };
   return {
     labelWidth: 100,
-    watchEvent: true, // 开启值触发reload
     schemas: [
       {
         field: `shopCode`,
@@ -83,6 +82,37 @@ export function getFormConfig(): Partial<FormProps> {
             },
           ],
         },
+        colProps,
+      },
+    ],
+  };
+}
+
+export const descItem: DescItem[] = [
+  {
+    field: 'hasBattery',
+    label: '创建时间',
+  },
+];
+
+export function getEditFormConfig(type: string): Partial<FormProps> {
+  return {
+    layout: 'vertical',
+    showActionButtonGroup: false,
+    schemas: [
+      {
+        field: `shopCode`,
+        label: `商品编码`,
+        component: 'InputSearch',
+        colProps,
+        componentProps: {
+          showSearch: true,
+        },
+      },
+      {
+        field: `address`,
+        label: `地址`,
+        component: 'Input',
         colProps,
       },
     ],
