@@ -19,21 +19,26 @@
   </Radio.Group>
 </template>
 <script lang="ts" setup>
-  import { type PropType, ref, watchEffect, computed, unref, watch } from 'vue';
+  import { type PropType, ref, computed, unref, watch } from 'vue';
   import { Radio } from 'ant-design-vue';
   import { isFunction } from '@/utils/is';
   import { useRuleFormItem } from '@/hooks/component/useFormItem';
   import { useAttrs } from '@vben/hooks';
   import { propTypes } from '@/utils/propTypes';
-  import { get, omit } from 'lodash-es';
+  import { get, omit, isEqual } from 'lodash-es';
 
-  type OptionsItem = { label: string; value: string | number | boolean; disabled?: boolean };
+  type OptionsItem = {
+    label?: string;
+    value?: string | number | boolean;
+    disabled?: boolean;
+    [key: string]: any;
+  };
 
   defineOptions({ name: 'ApiRadioGroup' });
 
   const props = defineProps({
     api: {
-      type: Function as PropType<(arg?: any | string) => Promise<OptionsItem[]>>,
+      type: Function as PropType<(arg?: any) => Promise<OptionsItem[] | Recordable<any>>>,
       default: null,
     },
     params: {
@@ -52,13 +57,20 @@
     labelField: propTypes.string.def('label'),
     valueField: propTypes.string.def('value'),
     immediate: propTypes.bool.def(true),
+    beforeFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
+    },
+    afterFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
+    },
   });
 
-  const emit = defineEmits(['options-change', 'change']);
+  const emit = defineEmits(['options-change', 'change', 'update:value']);
 
   const options = ref<OptionsItem[]>([]);
   const loading = ref(false);
-  const isFirstLoad = ref(true);
   const emitData = ref<any[]>([]);
   const attrs = useAttrs();
   // Embedded in the form, just use the hook binding to perform form verification
@@ -81,32 +93,35 @@
     }, [] as OptionsItem[]);
   });
 
-  watchEffect(() => {
-    props.immediate && fetch();
-  });
-
   watch(
     () => props.params,
-    () => {
-      !unref(isFirstLoad) && fetch();
+    (value, oldValue) => {
+      if (isEqual(value, oldValue)) return;
+      fetch();
     },
-    { deep: true },
+    { deep: true, immediate: props.immediate },
   );
 
   async function fetch() {
-    const api = props.api;
+    let { api, beforeFetch, afterFetch, params, resultField } = props;
     if (!api || !isFunction(api)) return;
     options.value = [];
     try {
       loading.value = true;
-      const res = await api(props.params);
+      if (beforeFetch && isFunction(beforeFetch)) {
+        params = (await beforeFetch(params)) || params;
+      }
+      let res = await api(params);
+      if (afterFetch && isFunction(afterFetch)) {
+        res = (await afterFetch(res)) || res;
+      }
       if (Array.isArray(res)) {
         options.value = res;
         emitChange();
         return;
       }
-      if (props.resultField) {
-        options.value = get(res, props.resultField) || [];
+      if (resultField) {
+        options.value = get(res, resultField) || [];
       }
       emitChange();
     } catch (error) {

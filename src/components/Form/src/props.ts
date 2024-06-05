@@ -2,9 +2,10 @@ import type { FieldMapToTime, FormSchema } from './types/form';
 import type { CSSProperties, PropType } from 'vue';
 import type { ColEx } from './types';
 import type { TableActionType } from '@/components/Table';
-import type { ButtonProps } from 'ant-design-vue/es/button/buttonTypes';
 import type { RowProps } from 'ant-design-vue/lib/grid/Row';
 import { propTypes } from '@/utils/propTypes';
+
+import { ButtonProps } from '@/components/Button';
 
 export const basicProps = {
   model: {
@@ -100,7 +101,4 @@ export const basicProps = {
   labelAlign: propTypes.string,
 
   rowProps: Object as PropType<RowProps>,
-
-  // table 开启监听表单监听事件，触发table reload
-  watchEvent: propTypes.bool.def(false),
 };

@@ -21,7 +21,7 @@
     "btn_scale_y": "Flip vertical",
     "btn_zoom_in": "Zoom in",
     "btn_zoom_out": "Zoom out",
-    "preview": "Preivew"
+    "preview": "Preview"
   },
   "drawer": {
     "loadingText": "Loading...",
@@ -67,7 +67,10 @@
     "settingFixedRight": "Fixed Right",
     "settingFullScreen": "Full Screen",
     "index": "Index",
-    "total": "total of {total}"
+    "total": "total of {total}",
+    "selectionBarTips": "{count} records selected.",
+    "selectionBarClear": "Clear",
+    "selectionBarEmpty": "No records selected."
   },
   "time": {
     "before": " ago",
@@ -107,7 +110,7 @@
     "fileName": "File name",
     "fileSize": "File size",
     "fileStatue": "File status",
-    "pending": "Pendig",
+    "pending": "Pending",
     "startUpload": "Start upload",
     "uploadSuccess": "Upload successfully",
     "uploadError": "Upload failed",

@@ -26,7 +26,7 @@
   import type { SelectValue } from 'ant-design-vue/es/select';
   import { isFunction } from '@/utils/is';
   import { useRuleFormItem } from '@/hooks/component/useFormItem';
-  import { get, omit } from 'lodash-es';
+  import { get, omit, isEqual } from 'lodash-es';
   import { LoadingOutlined } from '@ant-design/icons-vue';
   import { useI18n } from '@/hooks/web/useI18n';
   import { propTypes } from '@/utils/propTypes';
@@ -39,7 +39,7 @@
     value: { type: [Array, Object, String, Number] as PropType<SelectValue> },
     numberToString: propTypes.bool,
     api: {
-      type: Function as PropType<(arg?: any) => Promise<OptionsItem[]>>,
+      type: Function as PropType<(arg?: any) => Promise<OptionsItem[] | Recordable<any>>>,
       default: null,
     },
     // api params
@@ -53,6 +53,14 @@
     options: {
       type: Array<OptionsItem>,
       default: [],
+    },
+    beforeFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
+    },
+    afterFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
     },
   });
 
@@ -95,35 +103,42 @@
 
   watch(
     () => props.params,
-    () => {
-      !unref(isFirstLoaded) && fetch();
+    (value, oldValue) => {
+      if (isEqual(value, oldValue)) return;
+      fetch();
     },
     { deep: true, immediate: props.immediate },
   );
 
   async function fetch() {
-    const api = props.api;
+    let { api, beforeFetch, afterFetch, params, resultField } = props;
     if (!api || !isFunction(api) || loading.value) return;
     optionsRef.value = [];
     try {
       loading.value = true;
-      const res = await api(props.params);
+      if (beforeFetch && isFunction(beforeFetch)) {
+        params = (await beforeFetch(params)) || params;
+      }
+      let res = await api(params);
+      if (afterFetch && isFunction(afterFetch)) {
+        res = (await afterFetch(res)) || res;
+      }
       isFirstLoaded.value = true;
       if (Array.isArray(res)) {
         optionsRef.value = res;
         emitChange();
         return;
       }
-      if (props.resultField) {
-        optionsRef.value = get(res, props.resultField) || [];
+      if (resultField) {
+        optionsRef.value = get(res, resultField) || [];
       }
       emitChange();
     } catch (error) {
       console.warn(error);
-    } finally {
-      loading.value = false;
       // reset status
       isFirstLoaded.value = false;
+    } finally {
+      loading.value = false;
     }
   }
 

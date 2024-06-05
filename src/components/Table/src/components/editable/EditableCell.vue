@@ -16,6 +16,7 @@
   import { pick, set } from 'lodash-es';
   import { treeToList } from '@/utils/helper/treeHelper';
   import { Spin } from 'ant-design-vue';
+  import { parseRowKey } from '../../helper';
 
   export default defineComponent({
     name: 'EditableCell',
@@ -64,15 +65,38 @@
         return ['Checkbox', 'Switch'].includes(component);
       });
 
+      const getDisable = computed(() => {
+        const { editDynamicDisabled } = props.column;
+        let disabled = false;
+        if (isBoolean(editDynamicDisabled)) {
+          disabled = editDynamicDisabled;
+        }
+        if (isFunction(editDynamicDisabled)) {
+          const { record } = props;
+          disabled = editDynamicDisabled({ record, currentValue: currentValueRef.value });
+        }
+        return disabled;
+      });
+
       const getComponentProps = computed(() => {
         const isCheckValue = unref(getIsCheckComp);
+        let compProps = props.column?.editComponentProps ?? ({} as any);
+        const { checkedValue, unCheckedValue } = compProps;
 
         const valueField = isCheckValue ? 'checked' : 'value';
         const val = unref(currentValueRef);
 
-        const value = isCheckValue ? (isNumber(val) || isBoolean(val) ? val : !!val) : val;
+        let value = val;
+        if (isCheckValue) {
+          if (typeof checkedValue !== 'undefined') {
+            value = val === checkedValue ? checkedValue : unCheckedValue;
+          } else if (typeof unCheckedValue !== 'undefined') {
+            value = val === unCheckedValue ? unCheckedValue : checkedValue;
+          } else {
+            value = isNumber(val) || isBoolean(val) ? val : !!val;
+          }
+        }
 
-        let compProps = props.column?.editComponentProps ?? ({} as any);
         const { record, column, index } = props;
 
         if (isFunction(compProps)) {
@@ -106,18 +130,7 @@
         const dataKey = (dataIndex || key) as string;
         set(record, dataKey, value);
       }
-      const getDisable = computed(() => {
-        const { editDynamicDisabled } = props.column;
-        let disabled = false;
-        if (isBoolean(editDynamicDisabled)) {
-          disabled = editDynamicDisabled;
-        }
-        if (isFunction(editDynamicDisabled)) {
-          const { record } = props;
-          disabled = editDynamicDisabled({ record });
-        }
-        return disabled;
-      });
+
       const getValues = computed(() => {
         const { editValueMap } = props.column;
 
@@ -138,6 +151,11 @@
         return option?.label ?? value;
       });
 
+      const getRowEditable = computed(() => {
+        const { editable } = props.record || {};
+        return !!editable;
+      });
+
       const getWrapperStyle = computed((): CSSProperties => {
         if (unref(getIsCheckComp) || unref(getRowEditable)) {
           return {};
@@ -152,11 +170,6 @@
         return `edit-cell-align-${align}`;
       });
 
-      const getRowEditable = computed(() => {
-        const { editable } = props.record || {};
-        return !!editable;
-      });
-
       watchEffect(() => {
         // defaultValueRef.value = props.value;
         currentValueRef.value = props.value;
@@ -169,8 +182,9 @@
         }
       });
 
-      function handleEdit() {
-        if (unref(getRowEditable) || unref(props.column?.editRow)) return;
+      function handleEdit(e) {
+        e.stopPropagation();
+        if (unref(getRowEditable) || unref(props.column?.editRow) || unref(getDisable)) return;
         ruleMessage.value = '';
         isEdit.value = true;
         nextTick(() => {
@@ -179,7 +193,7 @@
         });
       }
 
-      async function handleChange(e: any) {
+      async function handleChange(e: any, ...rest: any[]) {
         const component = unref(getComponent);
         if (!e) {
           currentValueRef.value = e;
@@ -193,7 +207,7 @@
           currentValueRef.value = e;
         }
         const onChange = unref(getComponentProps)?.onChangeTemp;
-        if (onChange && isFunction(onChange)) onChange(...arguments);
+        if (onChange && isFunction(onChange)) onChange(e, ...rest);
 
         table.emit?.('edit-change', {
           column: props.column,
@@ -248,17 +262,20 @@
         if (!record.editable) {
           const { getBindValues } = table;
 
-          const { beforeEditSubmit, columns } = unref(getBindValues);
+          const { beforeEditSubmit, columns, rowKey } = unref(getBindValues);
+
+          const rowKeyParsed = parseRowKey(rowKey, record);
 
           if (beforeEditSubmit && isFunction(beforeEditSubmit)) {
             spinning.value = true;
             const keys: string[] = columns
               .map((_column) => _column.dataIndex)
               .filter((field) => !!field) as string[];
+
             let result: any = true;
             try {
               result = await beforeEditSubmit({
-                record: pick(record, keys),
+                record: pick(record, [rowKeyParsed, ...keys]),
                 index,
                 key: dataKey as string,
                 value,
@@ -352,11 +369,9 @@
           if (!props.record.editValueRefs) props.record.editValueRefs = {};
           props.record.editValueRefs[props.column.dataIndex as any] = currentValueRef;
         }
-        /* eslint-disable  */
         props.record.onCancelEdit = () => {
           isArray(props.record?.cancelCbs) && props.record?.cancelCbs.forEach((fn) => fn());
         };
-        /* eslint-disable */
         props.record.onSubmitEdit = async () => {
           if (isArray(props.record?.submitCbs)) {
             if (!props.record?.onValid?.()) return;
@@ -391,6 +406,7 @@
         handleEnter,
         handleSubmitClick,
         spinning,
+        getDisable,
       };
     },
     render() {
@@ -408,14 +424,21 @@
                     record: this.record as Recordable,
                     column: this.column,
                     index: this.index,
+                    currentValue: this.currentValueRef,
                   })
                 : this.getValues ?? '\u00A0'}
             </div>
-            {!this.column.editRow && <FormOutlined class={`${this.prefixCls}__normal-icon`} />}
+            {!this.column.editRow && !this.getDisable && (
+              <FormOutlined class={`${this.prefixCls}__normal-icon`} />
+            )}
           </div>
           {this.isEdit && (
-            <Spin spinning={this.spinning}>
-              <div class={`${this.prefixCls}__wrapper`} v-click-outside={this.onClickOutside}>
+            <Spin spinning={this.spinning} onClick={(e) => e.stopPropagation()}>
+              <div
+                class={`${this.prefixCls}__wrapper`}
+                v-click-outside={this.onClickOutside}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <CellComponent
                   {...this.getComponentProps}
                   component={this.getComponent}
@@ -483,7 +506,7 @@
   }
   .@{prefix-cls} {
     position: relative;
-    min-height: 24px; //设置高度让其始终可被hover
+    min-height: 24px; // 设置高度让其始终可被hover
 
     &__wrapper {
       display: flex;

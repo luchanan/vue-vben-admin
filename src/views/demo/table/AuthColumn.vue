@@ -135,8 +135,8 @@
       width: 250,
       title: 'Action',
       dataIndex: 'action',
-      // slots: { customRender: 'action' },
     },
+    showSelectionBar: true, // 显示多选状态栏
   });
   function handleEdit(record: Recordable) {
     console.log('点击了编辑', record);

@@ -142,13 +142,11 @@ export function getCustomHeaderColumns(): BasicColumn[] {
       // title: '姓名',
       dataIndex: 'name',
       width: 120,
-      // slots: { title: 'customTitle' },
     },
     {
       // title: '地址',
       dataIndex: 'address',
       width: 120,
-      // slots: { title: 'customAddress' },
       sorter: true,
     },
 
@@ -230,7 +228,7 @@ export function getMergeHeaderColumns(): BasicColumn[] {
   ];
 }
 export const getAdvanceSchema = (itemNumber = 6): FormSchema[] => {
-  const arr: any = [];
+  const arr: FormSchema[] = [];
   for (let index = 0; index < itemNumber; index++) {
     arr.push({
       field: `field${index}`,
@@ -252,47 +250,7 @@ export function getFormConfig(): Partial<FormProps> {
       {
         field: `field11`,
         label: `Slot示例`,
-        component: 'Select',
         slot: 'custom',
-        colProps: {
-          xl: 12,
-          xxl: 8,
-        },
-      },
-      {
-        field: `field12`,
-        label: `input值改变`,
-        component: 'InputSearch',
-        enableWatchEvent: true,
-        componentProps: {
-          placeholder: '需要开启watchEvent',
-        },
-        colProps: {
-          xl: 12,
-          xxl: 8,
-        },
-      },
-      {
-        field: 'field13',
-        component: 'Select',
-        label: 'select值改变',
-        componentProps: {
-          placeholder: '需要开启watchEvent',
-          options: [
-            {
-              label: '公开',
-              value: '1',
-            },
-            {
-              label: '部分公开',
-              value: '2',
-            },
-            {
-              label: '不公开',
-              value: '3',
-            },
-          ],
-        },
         colProps: {
           xl: 12,
           xxl: 8,
@@ -333,13 +291,62 @@ export function getTreeTableData() {
         endTime: new Date().toLocaleString(),
         children: [
           {
-            id: `l2-${index}`,
+            id: `l2-${index}-1`,
             name: 'John Brown',
-            age: `1${index}`,
+            age: `1`,
             no: `${index + 10}`,
             address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
             beginTime: new Date().toLocaleString(),
             endTime: new Date().toLocaleString(),
+            children: [
+              {
+                id: `l3-${index}-1-1`,
+                name: 'John Brown',
+                age: `11`,
+                no: `11`,
+                address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
+                beginTime: new Date().toLocaleString(),
+                endTime: new Date().toLocaleString(),
+              },
+              {
+                id: `l3-${index}-1-2`,
+                name: 'John Brown',
+                age: `12`,
+                no: `12`,
+                address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
+                beginTime: new Date().toLocaleString(),
+                endTime: new Date().toLocaleString(),
+              },
+            ],
+          },
+          {
+            id: `l2-${index}-2`,
+            name: 'John Brown',
+            age: `2`,
+            no: `${index + 10}`,
+            address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
+            beginTime: new Date().toLocaleString(),
+            endTime: new Date().toLocaleString(),
+            children: [
+              {
+                id: `l3-${index}-2-1`,
+                name: 'John Brown',
+                age: `21`,
+                no: `21`,
+                address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
+                beginTime: new Date().toLocaleString(),
+                endTime: new Date().toLocaleString(),
+              },
+              {
+                id: `l3-${index}-2-2`,
+                name: 'John Brown',
+                age: `22`,
+                no: `22`,
+                address: 'New York No. 1 Lake ParkNew York No. 1 Lake Park',
+                beginTime: new Date().toLocaleString(),
+                endTime: new Date().toLocaleString(),
+              },
+            ],
           },
         ],
       });

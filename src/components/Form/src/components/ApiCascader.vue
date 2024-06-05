@@ -20,7 +20,7 @@
 </template>
 <script lang="ts" setup>
   import { type Recordable } from '@vben/types';
-  import { PropType, ref, unref, watch, watchEffect } from 'vue';
+  import { PropType, ref, unref, watch } from 'vue';
   import { Cascader } from 'ant-design-vue';
   import type { CascaderProps } from 'ant-design-vue';
   import { propTypes } from '@/utils/propTypes';
@@ -31,11 +31,12 @@
   import { useI18n } from '@/hooks/web/useI18n';
 
   interface Option {
-    value: string;
-    label: string;
+    value?: string;
+    label?: string;
     loading?: boolean;
     isLeaf?: boolean;
     children?: Option[];
+    [key: string]: any;
   }
 
   defineOptions({ name: 'ApiCascader' });
@@ -45,7 +46,7 @@
       type: Array,
     },
     api: {
-      type: Function as PropType<(arg?: Recordable<any>) => Promise<Option[]>>,
+      type: Function as PropType<(arg?: any) => Promise<Option[] | Recordable<any>>>,
       default: null,
     },
     numberToString: propTypes.bool,
@@ -67,6 +68,14 @@
     },
     displayRenderArray: {
       type: Array,
+    },
+    beforeFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
+    },
+    afterFetch: {
+      type: Function as PropType<Fn>,
+      default: null,
     },
   });
 
@@ -111,19 +120,25 @@
     }, [] as Option[]);
   }
 
-  async function initialFetch() {
-    const api = props.api;
+  async function fetch() {
+    let { api, beforeFetch, initFetchParams, afterFetch, resultField } = props;
     if (!api || !isFunction(api)) return;
     apiData.value = [];
     loading.value = true;
     try {
-      const res = await api(props.initFetchParams);
+      if (beforeFetch && isFunction(beforeFetch)) {
+        initFetchParams = (await beforeFetch(initFetchParams)) || initFetchParams;
+      }
+      let res = await api(initFetchParams);
+      if (afterFetch && isFunction(afterFetch)) {
+        res = (await afterFetch(res)) || res;
+      }
       if (Array.isArray(res)) {
         apiData.value = res;
         return;
       }
-      if (props.resultField) {
-        apiData.value = get(res, props.resultField) || [];
+      if (resultField) {
+        apiData.value = get(res, resultField) || [];
       }
     } catch (error) {
       console.warn(error);
@@ -135,20 +150,26 @@
   const loadData: CascaderProps['loadData'] = async (selectedOptions) => {
     const targetOption = selectedOptions[selectedOptions.length - 1];
     targetOption.loading = true;
-
-    const api = props.api;
+    let { api, beforeFetch, afterFetch, resultField, apiParamKey } = props;
     if (!api || !isFunction(api)) return;
     try {
-      const res = await api({
-        [props.apiParamKey]: Reflect.get(targetOption, 'value'),
-      });
+      let param = {
+        [apiParamKey]: Reflect.get(targetOption, 'value'),
+      };
+      if (beforeFetch && isFunction(beforeFetch)) {
+        param = (await beforeFetch(param)) || param;
+      }
+      let res = await api(param);
+      if (afterFetch && isFunction(afterFetch)) {
+        res = (await afterFetch(res)) || res;
+      }
       if (Array.isArray(res)) {
         const children = generatorOptions(res);
         targetOption.children = children;
         return;
       }
-      if (props.resultField) {
-        const children = generatorOptions(get(res, props.resultField) || []);
+      if (resultField) {
+        const children = generatorOptions(get(res, resultField) || []);
         targetOption.children = children;
       }
     } catch (e) {
@@ -158,14 +179,20 @@
     }
   };
 
-  watchEffect(() => {
-    props.immediate && initialFetch();
-  });
+  watch(
+    () => props.immediate,
+    () => {
+      props.immediate && fetch();
+    },
+    {
+      immediate: true,
+    },
+  );
 
   watch(
     () => props.initFetchParams,
     () => {
-      !unref(isFirstLoad) && initialFetch();
+      !unref(isFirstLoad) && fetch();
     },
     { deep: true },
   );

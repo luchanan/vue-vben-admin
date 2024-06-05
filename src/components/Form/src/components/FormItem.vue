@@ -24,7 +24,6 @@
   import { cloneDeep, upperFirst } from 'lodash-es';
   import { useItemLabelWidth } from '../hooks/useLabelWidth';
   import { useI18n } from '@/hooks/web/useI18n';
-  import { useDebounceFn } from '@vueuse/core';
 
   export default defineComponent({
     name: 'BasicFormItem',
@@ -67,6 +66,12 @@
         schema: Ref<FormSchema>;
         formProps: Ref<FormProps>;
       };
+
+      // 组件 CropperAvatar 的 size 属性类型为 number
+      // 此处补充一个兼容
+      if (schema.value.component === 'CropperAvatar' && typeof formProps.value.size === 'string') {
+        formProps.value.size = undefined;
+      }
 
       const itemLabelWidthProp = useItemLabelWidth(schema, formProps);
 
@@ -160,7 +165,6 @@
         isShow = isShow && itemIsAdvanced;
         return { isShow, isIfShow };
       }
-
       function handleRules(): ValidationRule[] {
         const {
           rules: defRules = [],
@@ -170,7 +174,6 @@
           dynamicRules,
           required,
         } = props.schema;
-
         if (isFunction(dynamicRules)) {
           return dynamicRules(unref(getValues)) as ValidationRule[];
         }
@@ -181,7 +184,7 @@
         const joinLabel = Reflect.has(props.schema, 'rulesMessageJoinLabel')
           ? rulesMessageJoinLabel
           : globalRulesMessageJoinLabel;
-        const assertLabel = joinLabel ? label : '';
+        const assertLabel = joinLabel ? (isFunction(label) ? '' : label) : '';
         const defaultMsg = component
           ? createPlaceholderMessage(component) + assertLabel
           : assertLabel;
@@ -211,7 +214,6 @@
           }
           return Promise.resolve();
         }
-
         const getRequired = isFunction(required) ? required(unref(getValues)) : required;
 
         /*
@@ -221,7 +223,10 @@
          */
         if (getRequired) {
           if (!rules || rules.length === 0) {
-            rules = [{ required: getRequired, validator }];
+            const trigger = NO_AUTO_LINK_COMPONENTS.includes(component || 'Input')
+              ? 'blur'
+              : 'change';
+            rules = [{ required: getRequired, validator, trigger }];
           } else {
             const requiredIndex: number = rules.findIndex((rule) => Reflect.has(rule, 'required'));
 
@@ -271,49 +276,33 @@
           component,
           field,
           changeEvent = 'change',
-          watchEventNames = ['search', 'change'],
-          enableWatchEvent = true,
           valueField,
+          valueFormat,
         } = props.schema;
 
         const isCheck = component && ['Switch', 'Checkbox'].includes(component);
 
         const eventKey = `on${upperFirst(changeEvent)}`;
 
-        const { autoSetPlaceHolder, size, watchEvent } = props.formProps;
-        let eventNames = {};
-        if (watchEvent && enableWatchEvent) {
-          // table search 开启才触发事件
-          let immediateEvents = ['search']; // 立即执行的事件
-          watchEventNames.forEach((item) => {
-            let timer: number = 500;
-            if (immediateEvents.includes(item)) {
-              timer = 0;
-            }
-            eventNames[`on${upperFirst(item)}`] = useDebounceFn(
-              (...args: Nullable<Recordable<any>>[]) => {
-                // todo 后续需要优化input中文输入的问题
-                console.log(args);
-                const { reload = () => {} } = props.tableAction || {};
-                reload();
-              },
-              timer,
-            );
-          });
-        }
         const on = {
           [eventKey]: (...args: Nullable<Recordable<any>>[]) => {
             const [e] = args;
+            
+            const target = e ? e.target : null;
+            let value = target ? (isCheck ? target.checked : target.value) : e;
+            if(isFunction(valueFormat)){
+              value = valueFormat({...unref(getValues),value});
+            }
+            props.setFormModel(field, value, props.schema);
+
             if (propsData[eventKey]) {
               propsData[eventKey](...args);
             }
-            const target = e ? e.target : null;
-            const value = target ? (isCheck ? target.checked : target.value) : e;
-            props.setFormModel(field, value, props.schema);
           },
         };
         const Comp = componentMap.get(component) as ReturnType<typeof defineComponent>;
 
+        const { autoSetPlaceHolder, size } = props.formProps;
         const propsData: Recordable<any> = {
           allowClear: true,
           size,
@@ -338,7 +327,6 @@
         const compAttr: Recordable<any> = {
           ...propsData,
           ...on,
-          ...eventNames,
           ...bindValue,
         };
 
@@ -360,12 +348,13 @@
 
       function renderLabelHelpMessage() {
         const { label, helpMessage, helpComponentProps, subLabel } = props.schema;
+        const getLabel = isFunction(label) ? label(unref(getValues)) : label;
         const renderLabel = subLabel ? (
           <span>
-            {label} <span class="text-secondary">{subLabel}</span>
+            {getLabel} <span class="text-secondary">{subLabel}</span>
           </span>
         ) : (
-          label
+          getLabel
         );
         const getHelpMessage = isFunction(helpMessage)
           ? helpMessage(unref(getValues))
@@ -382,7 +371,7 @@
       }
 
       function renderItem() {
-        const { itemProps, slot, render, field, suffix, component } = props.schema;
+        const { itemProps, slot, render, field, suffix, component, prefix } = props.schema;
         const { labelCol, wrapperCol } = unref(itemLabelWidthProp);
         const { colon } = props.formProps;
         const opts = { disabled: unref(getDisable), readonly: unref(getReadonly) };
@@ -398,7 +387,10 @@
               labelCol={labelCol}
               wrapperCol={wrapperCol}
               name={field}
-              class={{ 'suffix-item': !!suffix }}
+              class={{
+                'suffix-item': !!suffix,
+                'prefix-item': !!prefix,
+              }}
             >
               <BasicTitle {...unref(getComponentsProps)}>{renderLabelHelpMessage()}</BasicTitle>
             </Form.Item>
@@ -408,13 +400,15 @@
             return slot
               ? getSlot(slots, slot, unref(getValues), opts)
               : render
-              ? render(unref(getValues), opts)
-              : renderComponent();
+                ? render(unref(getValues), opts)
+                : renderComponent();
           };
 
           const showSuffix = !!suffix;
           const getSuffix = isFunction(suffix) ? suffix(unref(getValues)) : suffix;
 
+          const showPrefix = !!prefix;
+          const getPrefix = isFunction(prefix) ? prefix(unref(getValues)) : prefix;
           // TODO 自定义组件验证会出现问题，因此这里框架默认将自定义组件设置手动触发验证，如果其他组件还有此问题请手动设置autoLink=false
           if (component && NO_AUTO_LINK_COMPONENTS.includes(component)) {
             props.schema &&
@@ -428,7 +422,10 @@
             <Form.Item
               name={field}
               colon={colon}
-              class={{ 'suffix-item': showSuffix }}
+              class={{
+                'suffix-item': showSuffix,
+                'prefix-item': showPrefix,
+              }}
               {...(itemProps as Recordable<any>)}
               label={renderLabelHelpMessage()}
               rules={handleRules()}
@@ -436,6 +433,7 @@
               wrapperCol={wrapperCol}
             >
               <div style="display:flex">
+                {showPrefix && <span class="prefix">{getPrefix}</span>}
                 <div style="flex:1;">{getContent()}</div>
                 {showSuffix && <span class="suffix">{getSuffix}</span>}
               </div>
@@ -446,7 +444,7 @@
 
       return () => {
         const { colProps = {}, colSlot, renderColContent, component, slot } = props.schema;
-        if (!component || (!componentMap.has(component) && !slot)) {
+        if (!((component && componentMap.has(component)) || slot)) {
           return null;
         }
 
@@ -460,8 +458,8 @@
           return colSlot
             ? getSlot(slots, colSlot, values, opts)
             : renderColContent
-            ? renderColContent(values, opts)
-            : renderItem();
+              ? renderColContent(values, opts)
+              : renderItem();
         };
 
         return (

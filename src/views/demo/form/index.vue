@@ -48,7 +48,7 @@
             labelField="name"
             valueField="id"
             :params="searchParams"
-            @search="useDebounceFn(onSearch, 300)"
+            @search="debounceOptionsFn"
           />
         </template>
       </BasicForm>
@@ -58,7 +58,7 @@
 <script lang="ts" setup>
   import { type Recordable } from '@vben/types';
   import { computed, unref, ref } from 'vue';
-  import { BasicForm, FormSchema, ApiSelect } from '@/components/Form';
+  import { BasicForm, ApiSelect, FormSchema } from '@/components/Form';
   import { CollapseContainer } from '@/components/Container';
   import { useMessage } from '@/hooks/web/useMessage';
   import { PageWrapper } from '@/components/Page';
@@ -71,6 +71,7 @@
   import { areaRecord } from '@/api/demo/cascader';
   import { uploadApi } from '@/api/sys/upload';
 
+  let debounceOptionsFn = useDebounceFn(onSearch, 300);
   const valueSelectA = ref<string[]>([]);
   const valueSelectB = ref<string[]>([]);
   const options = ref<Required<SelectProps>['options']>([]);
@@ -152,12 +153,13 @@
     {
       field: 'field1',
       component: 'Input',
-      label: '字段1',
+      label: ({ model }) => {
+        return `字段1${model.field3 ? model.field3 : ''}`;
+      },
 
       colProps: {
         span: 8,
       },
-      // componentProps:{},
       // can func
       componentProps: ({ schema, formModel }) => {
         console.log('form:', schema);
@@ -308,8 +310,8 @@
             value: '2',
           },
         ],
-        onChange: (e, v) => {
-          console.log('RadioButtonGroup====>:', e, v);
+        onChange: (e) => {
+          console.log(e);
         },
       },
     },
@@ -362,7 +364,7 @@
       component: 'BasicTitle',
       label: '标题区分',
       componentProps: {
-        line: true,
+        // line: true,
         span: true,
       },
       colProps: {
@@ -441,7 +443,7 @@
       componentProps: {
         api: areaRecord,
         apiParamKey: 'parentCode',
-        dataField: 'data',
+        // dataField: 'data',
         labelField: 'name',
         valueField: 'code',
         initFetchParams: {
@@ -457,7 +459,6 @@
     },
     {
       field: 'field31',
-      component: 'Input',
       label: '下拉本地搜索',
       helpMessage: ['ApiSelect组件', '远程数据源本地搜索', '只发起一次请求获取所有选项'],
       required: true,
@@ -466,10 +467,12 @@
         span: 8,
       },
       defaultValue: '0',
+      componentProps: {
+        onOptionsChange() {},
+      },
     },
     {
       field: 'field32',
-      component: 'Input',
       label: '下拉远程搜索',
       helpMessage: ['ApiSelect组件', '将关键词发送到接口进行远程搜索'],
       required: true,
@@ -578,8 +581,8 @@
         // use id as value
         valueField: 'id',
         isBtn: true,
-        onChange: (e, v) => {
-          console.log('ApiRadioGroup====>:', e, v);
+        onChange: (e) => {
+          console.log('ApiRadioGroup====>:', e);
         },
       },
       colProps: {
@@ -684,7 +687,6 @@
     },
     {
       field: 'selectA',
-      component: 'Select',
       label: '互斥SelectA',
       slot: 'selectA',
       defaultValue: [],
@@ -694,7 +696,6 @@
     },
     {
       field: 'selectB',
-      component: 'Select',
       label: '互斥SelectB',
       slot: 'selectB',
       defaultValue: [],

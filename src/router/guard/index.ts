@@ -6,6 +6,7 @@ import { AxiosCanceler } from '@/utils/http/axios/axiosCancel';
 import { Modal, notification } from 'ant-design-vue';
 import { warn } from '@/utils/log';
 import { unref } from 'vue';
+import { prefixCls } from '@/settings/designSetting';
 import { setRouteChange } from '@/logics/mitt/routeChange';
 import { createPermissionGuard } from './permissionGuard';
 import { createStateGuard } from './stateGuard';
@@ -101,11 +102,10 @@ function createScrollGuard(router: Router) {
     return /^#/.test(href);
   };
 
-  const body = document.body;
-
   router.afterEach(async (to) => {
     // scroll top
-    isHash((to as RouteLocationNormalized & { href: string })?.href) && body.scrollTo(0, 0);
+    isHash((to as RouteLocationNormalized & { href: string })?.href) &&
+      document.querySelector(`.${prefixCls}-layout-content`)?.scrollTo(0, 0);
     return true;
   });
 }

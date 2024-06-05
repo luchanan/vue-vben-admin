@@ -22,6 +22,7 @@
       v-show="getEmptyDataIsShowTable"
       @change="handleTableChange"
       @resize-column="setColumnWidth"
+      @expand="handleTableExpand"
     >
       <template #[item]="data" v-for="item in Object.keys($slots)" :key="item">
         <slot :name="item" v-bind="data || {}"></slot>
@@ -31,13 +32,9 @@
           <HeaderCell :column="column" />
         </slot>
       </template>
-      <!-- 增加对antdv3.x兼容 -->
       <template #bodyCell="data">
         <slot name="bodyCell" v-bind="data || {}"></slot>
       </template>
-      <!--      <template #[`header-${column.dataIndex}`] v-for="(column, index) in columns" :key="index">-->
-      <!--        <HeaderCell :column="column" />-->
-      <!--      </template>-->
     </Table>
   </div>
 </template>
@@ -48,12 +45,12 @@
     SizeType,
     ColumnChangeParam,
   } from './types/table';
-  import { ref, computed, unref, toRaw, inject, watchEffect, useAttrs, useSlots } from 'vue';
+  import { ref, computed, unref, toRaw, inject, watch, useAttrs, useSlots } from 'vue';
   import { Table } from 'ant-design-vue';
   import { BasicForm, useForm } from '@/components/Form';
   import { PageWrapperFixedHeightKey } from '@/enums/pageEnum';
   import HeaderCell from './components/HeaderCell.vue';
-  import { InnerHandlers } from './types/table';
+  import { InnerHandlers, InnerMethods } from './types/table';
   import { usePagination } from './hooks/usePagination';
   import { useColumns } from './hooks/useColumns';
   import { useDataSource } from './hooks/useDataSource';
@@ -69,10 +66,10 @@
   import { useTableFooter } from './hooks/useTableFooter';
   import { useTableForm } from './hooks/useTableForm';
   import { useDesign } from '@/hooks/web/useDesign';
-  import { omit } from 'lodash-es';
+  import { omit, debounce } from 'lodash-es';
+  import { useElementSize } from '@vueuse/core';
   import { basicProps } from './props';
   import { isFunction } from '@/utils/is';
-  import { warn } from '@/utils/log';
 
   defineOptions({ name: 'BasicTable' });
 
@@ -107,6 +104,8 @@
   const formRef = ref(null);
   const innerPropsRef = ref<Partial<BasicTableProps>>();
 
+  const { height } = useElementSize(wrapRef);
+
   const { prefixCls } = useDesign('basic-table');
   const [registerForm, formActions] = useForm();
 
@@ -115,13 +114,6 @@
   });
 
   const isFixedHeightPage = inject(PageWrapperFixedHeightKey, false);
-  watchEffect(() => {
-    unref(isFixedHeightPage) &&
-      props.canResize &&
-      warn(
-        "'canResize' of BasicTable may not work in PageWrapper with 'fixedHeight' (especially in hot updates)",
-      );
-  });
 
   const { getLoading, setLoading } = useLoading(getProps);
   const { getPaginationInfo, getPagination, setPagination, setShowPagination, getShowPagination } =
@@ -143,6 +135,7 @@
     getDataSourceRef,
     getDataSource,
     getRawDataSource,
+    getSearchInfo,
     setTableData,
     updateTableDataRecord,
     deleteTableDataRecord,
@@ -194,6 +187,7 @@
     wrapRef,
     formRef,
   );
+  const debounceRedoHeight = debounce(redoHeight, 50);
 
   const { scrollTo } = useTableScrollTo(tableElRef, getDataSourceRef);
 
@@ -207,11 +201,8 @@
 
   const { getRowClassName } = useTableStyle(getProps, prefixCls);
 
-  const { getExpandOption, expandAll, expandRows, collapseRows, collapseAll } = useTableExpand(
-    getProps,
-    tableData,
-    emit,
-  );
+  const { getExpandOption, expandAll, expandRows, collapseRows, collapseAll, handleTableExpand } =
+    useTableExpand(getProps, tableData, emit);
 
   const handlers: InnerHandlers = {
     onColumnsChange: (data: ColumnChangeParam[]) => {
@@ -221,7 +212,12 @@
     },
   };
 
-  const { getHeaderProps } = useTableHeader(getProps, slots, handlers);
+  const methods: InnerMethods = {
+    clearSelectedRowKeys,
+    getSelectRowKeys,
+  };
+
+  const { getHeaderProps } = useTableHeader(getProps, slots, handlers, methods);
 
   const { getFooterProps } = useTableFooter(getProps, getScrollRef, tableElRef, getDataSourceRef);
 
@@ -274,6 +270,10 @@
     return !!unref(getDataSourceRef).length;
   });
 
+  watch(height, () => {
+    unref(isFixedHeightPage) && props.canResize && debounceRedoHeight();
+  });
+
   function setProps(props: Partial<BasicTableProps>) {
     innerPropsRef.value = { ...unref(innerPropsRef), ...props };
   }
@@ -297,6 +297,7 @@
     setLoading,
     getDataSource,
     getRawDataSource,
+    getSearchInfo,
     setProps,
     getRowSelection,
     getPaginationRef: getPagination,
