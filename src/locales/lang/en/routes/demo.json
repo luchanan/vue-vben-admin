@@ -176,5 +176,9 @@
     "authColumn": "Auth column",
     "resizeParentHeightTable": "resizeParentHeightTable",
     "vxeTable": "VxeTable"
+  },
+  "practice": {
+    "best": "Best Practice",
+    "complexApplication": "Complex Application"
   }
 }

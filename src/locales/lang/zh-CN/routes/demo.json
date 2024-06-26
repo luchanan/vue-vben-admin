@@ -175,5 +175,9 @@
     "authColumn": "权限列",
     "resizeParentHeightTable": "继承父元素高度",
     "vxeTable": "VxeTable"
+  },
+  "practice": {
+    "best": "最佳实践",
+    "complexApplication": "综合应用"
   }
 }
