@@ -55,7 +55,7 @@
   import { useGo } from '@/hooks/web/usePage';
   import * as applicationComplex from '@/api/practive/complex';
 
-  defineOptions({ name: 'ApplicationComplex' });
+  defineOptions({ name: 'ComplexApplication' });
   let rowKey = 'id'; // 默认rowKey name
   const state = reactive<{
     selectedRowKeys: Key[];
